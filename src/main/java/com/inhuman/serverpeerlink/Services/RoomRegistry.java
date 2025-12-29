@@ -1,16 +1,21 @@
 package com.inhuman.serverpeerlink.Services;
 
+import com.inhuman.serverpeerlink.Models.Response;
+import com.inhuman.serverpeerlink.Models.ResponseType;
 import com.inhuman.serverpeerlink.Models.Room;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class RoomRegistry {
     //room code to room {peer1, peer2}
+    @Getter //for testing, remove later
     private final ConcurrentHashMap<String, Room> rooms = new ConcurrentHashMap<>();
 
     //session to room code
@@ -44,13 +49,13 @@ public class RoomRegistry {
     }
 
     //BEFORE JOINING, CHECK IF THE USER IS ALREADY IN A ROOM, IF YES THEN CLOSE THE PREVIOUS ROOM
-    public synchronized String joinRoom(WebSocketSession session, String username, String roomCode) {
+    public synchronized Response joinRoom(WebSocketSession session, String username, String roomCode) {
         //get the room from the mapping
         Room room = rooms.get(roomCode);
 
         //if room is null then create a room and add the peer
         if(room == null)
-            return "[ERROR] Room does not exists";
+            return new Response(ResponseType.ERROR, "Room does not exists");
 
         //check if the room is empty
         if(room.getPeer1() == null) {
@@ -62,11 +67,11 @@ public class RoomRegistry {
             room.setPeer2Name(username);
         }
         else
-            return "[ERROR] Room is Full";
+            return new Response(ResponseType.ERROR, "Room is Full");
 
         rooms.put(roomCode, room);
         sessionToRoomCode.put(session, roomCode);
-        return "[INFO] Joined room " + roomCode;
+        return new Response(ResponseType.JOINED, roomCode);
     }
 
     //gets the other peer
@@ -124,4 +129,5 @@ public class RoomRegistry {
 
         return "";
     }
+
 }

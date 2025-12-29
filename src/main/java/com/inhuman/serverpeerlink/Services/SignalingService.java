@@ -1,6 +1,8 @@
 package com.inhuman.serverpeerlink.Services;
 
 import com.inhuman.serverpeerlink.Models.MessageType;
+import com.inhuman.serverpeerlink.Models.Response;
+import com.inhuman.serverpeerlink.Models.ResponseType;
 import com.inhuman.serverpeerlink.Models.WebRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,12 +35,12 @@ public class SignalingService {
             case MessageType.LEAVE:
                 close(session);break;
 
-            case MessageType.OFFER, MessageType.ANSWER, MessageType.ICE:
+            case MessageType.OFFER, MessageType.ANSWER, MessageType.ICE, MessageType.ROLE:
                 manageSignal(session, webRequest);break;
 
             default:
                 log.warn("Invalid message type: {}", webRequest.getMessageType());
-                sendMessage(session,"[ERROR] Invalid request");
+                sendMessage(session, ResponseType.ERROR, "Invalid request");
         }
     }
 
@@ -51,7 +53,6 @@ public class SignalingService {
 
         //create room
         roomRegistry.createRoom(rc);
-        sendMessage(session,"[INFO] Room Created with room code: " + rc);
 
         //manage join as usual
         manageJoin(session, req);
@@ -60,16 +61,18 @@ public class SignalingService {
     private void manageJoin(WebSocketSession session, WebRequest req) {
         //check roomCode
         if(!roomRegistry.roomExists(req.getRoomCode())) {
-            sendMessage(session, "[ERROR] Room does not exists");
+            sendMessage(session, ResponseType.ERROR,"Room does not exists");
             return;
         }
+
         //join room code and return the response
-        sendMessage(session,roomRegistry.joinRoom(session, req.getUsername(), req.getRoomCode()));
+        Response resp = roomRegistry.joinRoom(session, req.getUsername(), req.getRoomCode());
+        sendMessage(session, resp.getResponseType(), resp.getMessage());
 
         //also notify the other peer
         WebSocketSession otherPeer = roomRegistry.getConcernedPeer(session, req.getRoomCode());
         if(otherPeer != null)
-            sendMessage(otherPeer,"[INFO] " + req.getUsername() + " joined the room");
+            sendMessage(otherPeer, ResponseType.PEER_JOIN,req.getUsername() + " joined the room");
     }
 
     private void manageSignal(WebSocketSession currPeer, WebRequest req) {
@@ -78,11 +81,12 @@ public class SignalingService {
 
         //either room is null or no other peer in the room
         if(receiver == null || !receiver.isOpen()) {
-            sendMessage(currPeer, "[ERROR] Room does not exists or No other peer");
+            sendMessage(currPeer, ResponseType.ERROR,"Room does not exists or No other peer");
+            return;
         }
 
         //send the message to the receiver
-        sendMessage(receiver,"[" + req.getMessageType().toString() + "] " +req.getMessage());
+        sendMessage(receiver, ResponseType.valueOf(req.getMessageType().name()), req.getMessage());
    }
 
     public void close(WebSocketSession session) throws IOException {
@@ -106,11 +110,22 @@ public class SignalingService {
 
         //notify other peers
         WebSocketSession otherPeer = roomRegistry.getConcernedPeer(null, roomCode);
-        if(otherPeer != null)
-            sendMessage(otherPeer, "[INFO] " + dcPeer + " left the room");
+        if(otherPeer != null && otherPeer.isOpen())
+            sendMessage(otherPeer, ResponseType.INFO, dcPeer + " left the room");
     }
 
-    private void sendMessage(WebSocketSession session, String message){
+    private void sendMessage(WebSocketSession session, ResponseType responseType, String message){
+        Response response = new Response(responseType, message);
+        try {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+        } catch (IOException e) {
+            log.error("Error while sending message", e);
+        }
+    }
+
+    public void sendMessagePub(WebSocketSession session, String message){
+        if (session == null) return;
+
         try {
             session.sendMessage(new TextMessage(message));
         } catch (IOException e) {

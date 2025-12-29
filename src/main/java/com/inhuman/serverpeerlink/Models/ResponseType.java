@@ -1,12 +1,13 @@
 package com.inhuman.serverpeerlink.Models;
 
-public enum MessageType {
+public enum ResponseType {
     OFFER,
     ANSWER,
     ICE,
 
     ROLE,
-    CREATE,
-    JOIN,
-    LEAVE
+    JOINED,
+    INFO,
+    PEER_JOIN,
+    ERROR
 }
