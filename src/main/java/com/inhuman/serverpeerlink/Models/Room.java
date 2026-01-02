@@ -1,13 +1,12 @@
 package com.inhuman.serverpeerlink.Models;
 
 import lombok.Data;
-import org.springframework.web.socket.WebSocketSession;
 
 @Data
 public class Room {
     private String roomCode;
-    private WebSocketSession peer1;
-    private WebSocketSession peer2;
+    private String sessionIdPeer1;
+    private String sessionIdPeer2;
     private String peer1Name;
     private String peer2Name;
 

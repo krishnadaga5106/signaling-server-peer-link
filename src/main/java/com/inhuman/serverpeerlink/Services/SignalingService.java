@@ -76,6 +76,13 @@ public class SignalingService {
     }
 
     private void manageSignal(WebSocketSession currPeer, WebRequest req) {
+        //check if the currPeer is in the given room or not
+        String roomCode = roomRegistry.sessionToRoomCode(currPeer);
+        if(!roomRegistry.roomExists(req.getRoomCode()) || roomCode == null || !roomCode.equals(req.getRoomCode())) {
+            sendMessage(currPeer, ResponseType.ERROR,"Room does not exists or Not in the room");
+            return;
+        }
+
         //get the receiver
         WebSocketSession receiver = roomRegistry.getConcernedPeer(currPeer, req.getRoomCode());
 
@@ -122,15 +129,4 @@ public class SignalingService {
             log.error("Error while sending message", e);
         }
     }
-
-    public void sendMessagePub(WebSocketSession session, String message){
-        if (session == null) return;
-
-        try {
-            session.sendMessage(new TextMessage(message));
-        } catch (IOException e) {
-            log.error("Error while sending message", e);
-        }
-    }
-
 }
