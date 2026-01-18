@@ -5,7 +5,6 @@ public enum ResponseType {
     ANSWER,
     ICE,
 
-    ROLE,
     JOINED,
     INFO,
     PEER_JOIN,

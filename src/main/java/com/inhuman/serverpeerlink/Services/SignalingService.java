@@ -35,7 +35,7 @@ public class SignalingService {
             case MessageType.LEAVE:
                 close(session);break;
 
-            case MessageType.OFFER, MessageType.ANSWER, MessageType.ICE, MessageType.ROLE:
+            case MessageType.OFFER, MessageType.ANSWER, MessageType.ICE:
                 manageSignal(session, webRequest);break;
 
             default:
@@ -117,14 +117,15 @@ public class SignalingService {
 
         //notify other peers
         WebSocketSession otherPeer = roomRegistry.getConcernedPeer(null, roomCode);
-        if(otherPeer != null && otherPeer.isOpen())
+        if(otherPeer != null)
             sendMessage(otherPeer, ResponseType.INFO, dcPeer + " left the room");
     }
 
     private void sendMessage(WebSocketSession session, ResponseType responseType, String message){
         Response response = new Response(responseType, message);
         try {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+            if(session.isOpen())
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
         } catch (IOException e) {
             log.error("Error while sending message", e);
         }

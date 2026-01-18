@@ -5,8 +5,6 @@ public enum MessageType {
     ANSWER,
     ICE,
 
-    ROLE,
-
     CREATE,
     JOIN,
     LEAVE
